@@ -22,6 +22,7 @@ InputParasL.wg = 5e-13;
 InputParasL.phi = 0;
 InputParasR = 0;
 
+
 n_g = 3.5;
 vg = c_c/n_g*1e2;            % TWM cm/s group velocity
 lambda = 1550e-9;
@@ -31,6 +32,9 @@ plotN = 10;
 L = 1000e-6*1e2;             % cm
 XL = [0,L];
 YL = [0,InputParasL.E0];
+
+RL = 0.9i;
+RR = 0.9i;
 
 Nz = 500;
 dz = L/(Nz-1);
@@ -94,14 +98,14 @@ for i = 2:Nt
     InputL(i) = Ef1(t,InputParasL);
     InputR(i) = ErN(t,0);
 
-    Ef(1) = InputL(i);
-    Er(Nz) = InputR(i);
+    Ef(1) = InputL(i) + RL*Er(1);
+    Er(Nz) = InputR(i) + RR*Ef(Nz);
 
     Ef(2:Nz) = fsync*Ef(1:Nz-1);
     Er(1:Nz-1) = fsync*Er(2:Nz);
 
-    OutputR(i) = Ef(Nz);
-    OutputL(i) = Er(1);
+    OutputR(i) = Ef(Nz)*(1-RR);
+    OutputL(i) = Er(1)*(1-RL);
 
     if mod(i,plotN) == 0
         subplot(3,1,1)
