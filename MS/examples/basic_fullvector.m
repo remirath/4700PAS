@@ -22,7 +22,7 @@ dx = 0.0125;        % grid size (horizontal)
 dy = 0.0125;        % grid size (vertical)
 
 lambda = 1.55;      % vacuum wavelength
-nmodes = 1;         % number of modes to compute
+nmodes = 5;         % number of modes to compute
 te = 1;             % To activate TE mode set to 1, otherwise 0
 tm = 1;             % To activate TM mode set to 1, otherwise 0
 
