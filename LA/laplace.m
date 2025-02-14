@@ -1,7 +1,7 @@
 % PA 4 Ryan Wood 
 % 101195542
 
-n_nodes = 100;                  % number of nodes on each side of square
+n_nodes = 50;                  % number of nodes on each side of square
 size = 10;                      % size of square
 n_iter = 100;                    % number of iterations
 
