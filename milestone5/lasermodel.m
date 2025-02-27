@@ -9,6 +9,7 @@ set(0,'Defaultaxeslinewidth',2)
 
 set(0,'DefaultFigureWindowStyle','docked')
 
+% Constants and terms
 c_c = 299792458;             % m/s TWM speed of light
 c_eps_0 = 8.8542149e-12;     % F/m vacuum permittivity
 c_eps_0_cm = c_eps_0/100;    % F/cm
@@ -26,11 +27,11 @@ InputParasR = 0;             %
 
 n_g = 3.5;                   % index of refration of waveguide
 vg = c_c/n_g*1e2;            % TWM cm/s group velocity
-lambda = 1550e-9;
+lambda = 1550e-9;            % wavelength
 g_fwhm = 3.53e+012/10;
 LGamma = g_fwhm*2*pi;
-Lw0 = 0;
-LGain = 0.1;
+Lw0 = 1e12;                 % resonant frequency
+LGain = 0.1;                % resonant gain
 
 plotN = 10;
 
@@ -68,17 +69,16 @@ Erp = Er;
 Pfp = Pf;
 Prp = Pr;
 
+% Exponential spatial growth term
 beta_i = 0;                  % imaginary wave beta
-beta_r = 0;                  % real wave beta
+beta_r = 0;                 % real wave beta
 beta = ones(size(z))*(beta_r+1i*beta_i);    % beta = beta_r + i*beta_i. sets length of waveguide to beta
 exp_det = exp(-1i*dz*beta);  % exponential growth term along z, rotating with length
-kappa0 = 100;                % value of kappa 0
-kappaStart = 1/3;            % grating starts at 1/3 of the waveguide length
-kappaStop = 2/3;             % grating ends at 2/3 of the waveguide length
-kappa = kappa0*ones(size(z)); % kappa as matrix
-kappa(z<L*kappaStart) = 0;    % set the value of kappa to 0 when grating is not present
-kappa(z>L*kappaStop) = 0;     %
-    
+
+% Grating
+
+kappa = grating(1/6,5/6,'gaussian');
+
 % Initial Conditions
 
 Ef1 = @SourceFct;            % forward envelope child of sourcefct
@@ -130,23 +130,24 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
     Ef(1) = InputL(i) + RL*Er(1);       % first index of forward envelope is current left input plus the left reflected envelope
     Er(Nz) = InputR(i) + RR*Ef(Nz);     % last index of reverse envelope is current right input plus the right reflected envelope
 
-    Pf(1) = 0;
+
+    Pf(1) = 0;  
     Pf(Nz) = 0;
     Pr(1) = 0;
     Pr(Nz) = 0;
     Cw0 = -LGamma + 1i*Lw0;
 
     Tf = LGamma*Ef(1:Nz-2) + Cw0*Pfp(2:Nz-1) + LGamma*Efp(1:Nz-2);
-    Pf(2:Nz-1) = (Pfp(2:Nz-1) + 0.5*dt*Tf)./(1-0.5*dt*Cw0);
-    Tr = LGamma*Er(3:Nz) + Cw0*Prp(2:Nz-1) + LGamma*Erp(3:Nz);
-    Pr(2:Nz-1) = (Prp(2:Nz-1) + 0.5*dt*Tr)./(1-0.5*dt*Cw0);
+    Pf(2:Nz-1) = (Pfp(2:Nz-1) + 0.5*dt*Tf)./(1-0.5*dt*Cw0);             % forward polarization term using trapezoidal rule
+    Tr = LGamma*Er(3:Nz) + Cw0*Prp(2:Nz-1) + LGamma*Erp(3:Nz);          
+    Pr(2:Nz-1) = (Prp(2:Nz-1) + 0.5*dt*Tr)./(1-0.5*dt*Cw0);             % reverse polarization term calculated with trapezoidal rule
 
 
     Ef(2:Nz-1) = Ef(2:Nz-1) - LGain*(Ef(2:Nz-1)-Pf(2:Nz-1));            % forward envelope with polarization and gain terms
     Er(2:Nz-1) = Er(2:Nz-1) - LGain*(Er(2:Nz-1)-Pr(2:Nz-1));            % reverse envelope with polarization and gain terms
 
     Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Efp(1:Nz-1) + 1i*dz*kappa(1:Nz-1).*Er(1:Nz-1);        % updated value of forward envelope
-    Er(1:Nz-1) = fsync*exp_det(2:Nz).*Er(2:Nz) + 1i*dz*kappa(2:Nz).*Efp(2:Nz);        % updated value of reverse en
+    Er(1:Nz-1) = fsync*exp_det(2:Nz).*Er(2:Nz) + 1i*dz*kappa(2:Nz).*Efp(2:Nz);        % updated value of reverse envelope
     
     OutputR(i) = Ef(Nz)*(1-RR);         % set right output to the last index of forward envelope scaled by 1 minus the reflection coefficient
     OutputL(i) = Er(1)*(1-RL);          % set left output to the first index of reverse envelope scaled by 1 minutes the reflection coefficient
@@ -169,7 +170,7 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
         ylim([-InputParasL.E0,InputParasL.E0])
         xlabel('z(\mum)')
         ylabel('E_f')
-        legend('\Re','\Im')
+        % legend('\Re','\Im')
         hold off
 
         % Reverse real and imaginary waveform
@@ -180,7 +181,7 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
         ylim([-InputParasL.E0,InputParasL.E0])
         xlabel('z(\mum)')
         ylabel('E_r')
-        legend('\Re','\Im')
+        % legend('\Re','\Im')
 
         % Live plotting of left and right-side I/O waveforms
         hold off
@@ -193,7 +194,7 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
         ylim([-InputParasL.E0,InputParasL.E0])
         xlabel('time(ps)')
         ylabel('0')
-        legend('Left Input','Right Output','Right Input','Left Output', 'Location','East')
+        % legend('Left Input','Right Output','Right Input','Left Output', 'Location','East')
         hold off
         pause(0.01)
     end
@@ -221,7 +222,7 @@ hold off
 subplot(3,2,4)
 plot(omega,abs(fftInput),'b'); hold on
 plot(omega,abs(fftOutput),'g'); hold off
-xlim([min(omega)/10,max(omega)/10])
+xlim([min(omega)/15,max(omega)/15])
 ylim([0,max(max(abs(fftInput)),max(abs(fftOutput)))])
 xlabel('THz')
 ylabel('|E|')
@@ -233,7 +234,7 @@ plot(omega,unwrap(angle(fftInput)),'b'); hold on
 plot(omega,unwrap(angle(fftOutput)),'g'); hold off
 yMin = min(min(unwrap(angle(fftOutput))), min(unwrap(angle(fftInput))));
 yMax = max(max(unwrap(angle(fftOutput))),max(unwrap(angle(fftInput))));
-xlim([min(omega)/10,max(omega)/10])
+xlim([min(omega)/15,max(omega)/15])
 ylim([yMin,yMax])
 xlabel('THz')
 ylabel('phase (E)')
