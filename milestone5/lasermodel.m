@@ -36,8 +36,8 @@ LGain = 0.1;                % resonant gain
 plotN = 10;
 
 L = 1000e-6*1e2;             % cm length of waveguide
-XL = [0,L];
-YL = [-3*InputParasL.E0,3*InputParasL.E0];
+XL = [0,L];                  % x limits for plotting
+YL = [-3*InputParasL.E0,3*InputParasL.E0]; % y limits for plotting
 
 RL = 0.9i;                   % Reflected wave left
 RR = 0.9i;                   % Reflected wave right
@@ -51,6 +51,7 @@ Nt = floor(2*Nz);            % number of units of time is twice that of length
 tmax = Nt*dt;                % time length of the simulation
 t_L = dt*Nz;                 % time to travel length
 
+% Allocate space for equation calculations
 z = linspace(0,L,Nz).';      % Nz points, Nz-1 segments
 time = nan(1,Nt);            % 1xNt array of NaN
 InputL = nan(1,Nt);          %
@@ -75,9 +76,9 @@ beta_r = 0;                 % real wave beta
 beta = ones(size(z))*(beta_r+1i*beta_i);    % beta = beta_r + i*beta_i. sets length of waveguide to beta
 exp_det = exp(-1i*dz*beta);  % exponential growth term along z, rotating with length
 
-% Grating
+% Grating (see grating.m or README.txt for functionality)
 
-kappa = grating(1/6,5/6,'gaussian');
+kappa = grating(0.25,0.75,'uniform',0);
 
 % Initial Conditions
 
@@ -99,17 +100,17 @@ Er(Nz) = InputR(1);                 % set reverse envelope to right input initia
 % Plotting
 
 figure('name','Fields')             % set up plotting
-subplot(3,2,1)
+subplot(1,3,1)
 plot(z*10000,real(Ef),'r');         % plot real part of forward envelope
 hold off
 xlabel('z(\mum)')
 ylabel('E_f')
-subplot(3,2,3)
+subplot(1,3,2)
 plot(z*10000,real(Er),'b');         % plot real part of reverse envelope
 xlabel('z(\mum)')
 ylabel('E_r')
 hold off
-subplot(3,2,5)
+subplot(1,3,3)
 plot(time*1e12,real(InputL),'r'); hold on
 plot(time*1e12,real(OutputR),'r--');
 plot(time*1e12,real(InputR),'b'); hold on
@@ -137,6 +138,7 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
     Pr(Nz) = 0;
     Cw0 = -LGamma + 1i*Lw0;
 
+    % Update equations
     Tf = LGamma*Ef(1:Nz-2) + Cw0*Pfp(2:Nz-1) + LGamma*Efp(1:Nz-2);
     Pf(2:Nz-1) = (Pfp(2:Nz-1) + 0.5*dt*Tf)./(1-0.5*dt*Cw0);             % forward polarization term using trapezoidal rule
     Tr = LGamma*Er(3:Nz) + Cw0*Prp(2:Nz-1) + LGamma*Erp(3:Nz);          
@@ -163,7 +165,7 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
     if mod(i,plotN) == 0
 
         % Forward real and imaginary waveform
-        subplot(3,2,1)
+        subplot(1,3,1)
         plot(z*10000,real(Ef),'r'); hold on
         plot(z*10000,imag(Ef),'r--'); hold off
         xlim(XL*1e4)
@@ -174,7 +176,7 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
         hold off
 
         % Reverse real and imaginary waveform
-        subplot(3,2,3)
+        subplot(1,3,2)
         plot(z*10000,real(Er),'b'); hold on
         plot(z*10000,imag(Er),'b--'); hold off
         xlim(XL*1e4)
@@ -185,7 +187,7 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
 
         % Live plotting of left and right-side I/O waveforms
         hold off
-        subplot(3,2,5)
+        subplot(1,3,3)
         plot(time*1e12,real(InputL),'r'); hold on
         plot(time*1e12,real(OutputR),'g');
         plot(time*1e12,real(InputR),'b');
@@ -206,8 +208,10 @@ fftOutput = fftshift(fft(OutputR));     % FFT of output
 fftInput = fftshift(fft(InputL));       % FFT of input
 omega = fftshift(wspace(time));         % Find phase shift of the fourier transform
 
+figure('name','Frequency Analysis')
+
 % Plot the input and output waveforms over time
-subplot(3,2,2)
+subplot(1,3,1)
 plot(time*1e12,real(InputL),'r'); hold on
 plot(time*1e12,real(OutputR),'g');
 plot(time*1e12,imag(OutputR),'g--');
@@ -219,7 +223,7 @@ legend('Input','\Re Output','\Im Output')
 hold off
 
 % Plot the fourier transform of the input and output waveforms
-subplot(3,2,4)
+subplot(1,3,2)
 plot(omega,abs(fftInput),'b'); hold on
 plot(omega,abs(fftOutput),'g'); hold off
 xlim([min(omega)/15,max(omega)/15])
@@ -229,7 +233,7 @@ ylabel('|E|')
 legend('Input','Output')
 
 % Plot the change in phase due to frequency of both waveforms
-subplot(3,2,6)
+subplot(1,3,3)
 plot(omega,unwrap(angle(fftInput)),'b'); hold on
 plot(omega,unwrap(angle(fftOutput)),'g'); hold off
 yMin = min(min(unwrap(angle(fftOutput))), min(unwrap(angle(fftInput))));

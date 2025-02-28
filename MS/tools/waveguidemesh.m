@@ -1,4 +1,4 @@
-function [x,y,xc,yc,nx,ny,eps,varargout] = waveguidemesh(n,h,rh,rw,side,dx,dy);
+function [x,y,xc,yc,nx,ny,eps,varargout] = waveguidemesh(n,h,rh,rw,side,dx,dy)
 
 % This function creates an index mesh for the finite-difference
 % mode solver.  The function will accommodate a generalized three
