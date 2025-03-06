@@ -23,7 +23,7 @@ InputParasL.we = 0;          % rotation frequency
 InputParasL.t0 = 2e-12;      % time delay
 InputParasL.wg = 8e-13;      % gaussian width
 InputParasL.phi = 0;         % phase
-InputParasL.rep = 500e-12;   % repeating pulse
+InputParasL.rep = 500e-12;
 InputParasR = 0;             % 
 
 n_g = 3.5;                   % index of refration of waveguide

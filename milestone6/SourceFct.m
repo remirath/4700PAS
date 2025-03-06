@@ -1,6 +1,6 @@
 function E = SourceFct(t,InputParas)
 
-if isfield(InputParas,'rep')
+if isfield(InputParas,'rep')        % repeat pulse
     n = floor(t/InputParas.rep);
     t = t-n*InputParas.rep;
 end
