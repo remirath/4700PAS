@@ -6,7 +6,6 @@ set(0,'defaultaxesfontsize',20)
 set(0,'DefaultFigureWindowStyle','docked')
 set(0,"DefaultLineLineWidth",2)
 set(0,'Defaultaxeslinewidth',2)
-
 set(0,'DefaultFigureWindowStyle','docked')
 
 % Constants and terms
@@ -26,6 +25,7 @@ InputParasL.phi = 0;         % phase
 InputParasL.rep = 500e-12;   % repeating pulse
 InputParasR = 0;             % 
 
+% Behavioural constants
 n_g = 3.5;                   % index of refration of waveguide
 vg = c_c/n_g*1e2;            % TWM cm/s group velocity
 lambda = 1550e-9;            % wavelength
@@ -33,24 +33,27 @@ f0 = c_c/lambda;             % characteristic frequency
 Ntr = 1e18;                  % for carrier frequency
 g_fwhm = 3.53e+012/10;
 LGamma = g_fwhm*2*pi;
-Lw0 = 1e12;                 % resonant frequency
-LGain = 0.1;                % resonant gain
+Lw0 = 1e12;                  % resonant frequency
+LGain = 0.1;                 % resonant gain
+beta_spe = .3e-5;
+gamma = 1.0;
+SPE = 7;
+taun = 1e-9;                    % spontaneous emission term tau_n
+Zg = sqrt(c_mu_0/c_eps_0)/n_g;  % 
+EtoP = 1/(Zg*f0*vg*1e-2*c_hb);  % conversion factor from electric field to photon density using Zg
 
+% Waveguide and plotting parameters
 plotN = 1000;
-
 L = 1000e-6*1e2;             % cm length of waveguide
 XL = [0,L];
 YL = [-3*InputParasL.E0,3*InputParasL.E0];
-
 RL = 0;%0.9i;                   % Reflected wave left
 RR = 0;%0.9i;                   % Reflected wave right
-
 Nz = 500;                    % number of z units in waveguide
 dz = L/(Nz-1);               % cm unit of length
-dt = dz/vg;                % s unit of time
+dt = dz/vg;                  % s unit of time
 fsync = dt*vg/dz;            % Hz Synchronous frequency
-
-Nt = floor(420*Nz);            % number of units of time is twice that of length
+Nt = floor(420*Nz);          % number of units of time is twice that of length
 tmax = Nt*dt;                % time length of the simulation
 t_L = dt*Nz;                 % time to travel length
 
@@ -60,6 +63,15 @@ InputL = nan(1,Nt);          %
 InputR = nan(1,Nt);          %
 OutputL = nan(1,Nt);         %
 OutputR = nan(1,Nt);         %
+
+A = sqrt(gamma*beta_spe*c_hb*f0*L*1e-2/taun)/(2*Nz);
+if SPE > 0
+    Tf = (randn(Nz,1)+1i*randn(Nz,1)).*A;
+    Tr = (randn(Nz,1)+1i*randn(Nz,1)).*A;
+else
+    Tf = (ones(Nz,1))*A;
+    Tr = (ones(Nz,1))*A;
+end
 
 Ef = zeros(size(z));         % envelope of forward electric field
 Er = zeros(size(z));         % envelope of reverse electric field
@@ -71,12 +83,6 @@ Efp = Ef;
 Erp = Er;
 Pfp = Pf;
 Prp = Pr;
-
-% Exponential spatial growth term
-beta_i = 0;                  % imaginary wave beta
-beta_r = 0;                 % real wave beta
-beta = ones(size(z))*(beta_r+1i*beta_i);    % beta = beta_r + i*beta_i. sets length of waveguide to beta
-exp_det = exp(-1i*dz*beta);  % exponential growth term along z, rotating with length
 
 % Grating
 kappa = grating(0,0,'n/a');
@@ -91,10 +97,6 @@ Ion = 0.25e-9;                  % current is added between Ion and Ioff
 Ioff = 3e-9;                    % 
 I_off = 0.024;                  % the value of current provided when turned off
 I_on = 0.1;                     % vs. when turned on
-taun = 1e-9;                    % spontaneous emission term tau_n
-Zg = sqrt(c_mu_0/c_eps_0)/n_g;  % 
-EtoP = 1/(Zg*f0*vg*1e-2*c_hb); % conversion factor from electric field to photon density using Zg
-alpha = 0;                      % 
 
 % Initial Conditions
 Ef1 = @SourceFct;            % forward envelope child of sourcefct
@@ -147,17 +149,12 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
     t = dt*(i-1);               % set time to next time unit
     time(i) = t;                % set each time array index to current time each loop
 
-    % if mod(Nt,Nt/10) == 0
-    %     InputL(1) = Ef1(t,InputParasL);     % first index of left input array set to gaussian from sourcefct
-    % end
-
-
+    % Setting up equations
     InputL(i) = Ef1(t,InputParasL);     % propagate envelope from left end of waveguide
     InputR(i) = ErN(t,0);
 
     Ef(1) = InputL(i) + RL*Er(1);       % first index of forward envelope is current left input plus the left reflected envelope
     Er(Nz) = InputR(i) + RR*Ef(Nz);     % last index of reverse envelope is current right input plus the right reflected envelope
-
 
     Pf(1) = 0;  
     Pf(Nz) = 0;
@@ -170,7 +167,18 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
         I_injv = I_off;                                 % turn off
     else                                                %
         I_injv = I_on;                                  % turn on
-    end                                                 %                                                                  
+    end                                                 %      
+
+    % Exponential spatial growth term and stimulated emission
+    alpha = 0;                                  % loss term
+    beta_r = 0;                                 % real wave beta
+    gain_z = gain.*(N-Ntr)./vg;                % gain term due to stimulated emission
+    beta_i = (gain_z-alpha)./2;                 % imaginary wave beta with gain/loss terms
+    beta = ones(size(z)).*(beta_r+1i*beta_i);    % set length of waveguide to beta
+    exp_det = exp(-1i*dz*beta);                 % exponential growth term along z, rotating with length
+
+    EsF = Tf*abs(SPE).*sqrt(N.*1e6);
+    EsR = Tr*abs(SPE).*sqrt(N.*1e6);
 
     % Update equations
     Tf = LGamma*Ef(1:Nz-2) + Cw0*Pfp(2:Nz-1) + LGamma*Efp(1:Nz-2);
@@ -192,11 +200,15 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
     N = (N + dt*(I_injv/eVol - Stim))./(1+dt/taun);     % N(z) update equation
     Nave(i) = mean(N);                                  % record average value of N each step
 
+    Ef = Ef + EsF;
+    Er = Er + EsR;
+
     % Reset to previous values to avoid instability
     Efp = Ef;
     Erp = Er;
     Pfp = Pf;
     Prp = Pr;
+
 
     % Live plotting of input and output signals
     if mod(i,plotN) == 0
@@ -250,46 +262,46 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
 end
 
 % Frequency domain analysis of signal
-% 
-% fftOutput = fftshift(fft(OutputR));     % FFT of output
-% fftInput = fftshift(fft(InputL));       % FFT of input
-% omega = fftshift(wspace(time));         % Find phase shift of the fourier transform
-% 
-% figure('name','Frequency Analysis')
-% 
-% % Plot the input and output waveforms over time
-% subplot(1,3,1)
-% plot(time*1e12,real(InputL),'r'); hold on
-% plot(time*1e12,real(OutputR),'g');
-% plot(time*1e12,imag(OutputR),'g--');
-% xlim([0,Nt*dt*1e12])
-% ylim([-InputParasL.E0,InputParasL.E0])
-% xlabel('time(ps)')
-% ylabel('Right Output')
-% legend('Input','\Re Output','\Im Output')
-% hold off
-% 
-% % Plot the fourier transform of the input and output waveforms
-% subplot(1,3,2)
-% plot(omega,abs(fftInput),'b'); hold on
-% plot(omega,abs(fftOutput),'g'); hold off
-% xlim([min(omega)/15,max(omega)/15])
-% ylim([0,max(max(abs(fftInput)),max(abs(fftOutput)))])
-% xlabel('THz')
-% ylabel('|E|')
-% legend('Input','Output')
-% 
-% % Plot the change in phase due to frequency of both waveforms
-% subplot(1,3,3)
-% plot(omega,unwrap(angle(fftInput)),'b'); hold on
-% plot(omega,unwrap(angle(fftOutput)),'g'); hold off
-% yMin = min(min(unwrap(angle(fftOutput))), min(unwrap(angle(fftInput))));
-% yMax = max(max(unwrap(angle(fftOutput))),max(unwrap(angle(fftInput))));
-% xlim([min(omega)/15,max(omega)/15])
-% ylim([yMin,yMax])
-% xlabel('THz')
-% ylabel('phase (E)')
-% legend('Input','Output')
+
+fftOutput = fftshift(fft(OutputR));     % FFT of output
+fftInput = fftshift(fft(InputL));       % FFT of input
+omega = fftshift(wspace(time));         % Find phase shift of the fourier transform
+
+figure('name','Frequency Analysis')
+
+% Plot the input and output waveforms over time
+subplot(1,3,1)
+plot(time*1e12,real(InputL),'r'); hold on
+plot(time*1e12,real(OutputR),'g');
+plot(time*1e12,imag(OutputR),'g--');
+xlim([0,Nt*dt*1e12])
+ylim([-InputParasL.E0,InputParasL.E0])
+xlabel('time(ps)')
+ylabel('Right Output')
+legend('Input','\Re Output','\Im Output')
+hold off
+
+% Plot the fourier transform of the input and output waveforms
+subplot(1,3,2)
+plot(omega,abs(fftInput),'b'); hold on
+plot(omega,abs(fftOutput),'g'); hold off
+xlim([min(omega)/15,max(omega)/15])
+ylim([0,max(max(abs(fftInput)),max(abs(fftOutput)))])
+xlabel('THz')
+ylabel('|E|')
+legend('Input','Output')
+
+% Plot the change in phase due to frequency of both waveforms
+subplot(1,3,3)
+plot(omega,unwrap(angle(fftInput)),'b'); hold on
+plot(omega,unwrap(angle(fftOutput)),'g'); hold off
+yMin = min(min(unwrap(angle(fftOutput))), min(unwrap(angle(fftInput))));
+yMax = max(max(unwrap(angle(fftOutput))),max(unwrap(angle(fftInput))));
+xlim([min(omega)/15,max(omega)/15])
+ylim([yMin,yMax])
+xlabel('THz')
+ylabel('phase (E)')
+legend('Input','Output')
 
 
 
