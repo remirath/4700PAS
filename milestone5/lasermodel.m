@@ -78,7 +78,7 @@ exp_det = exp(-1i*dz*beta);  % exponential growth term along z, rotating with le
 
 % Grating (see grating.m or README.txt for functionality)
 
-kappa = grating(0.25,0.75,'uniform',0);
+kappa = grating(0.25,0.75,'chirped',200);
 
 % Initial Conditions
 
