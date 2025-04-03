@@ -19,8 +19,8 @@ c_h = c_hb*2*pi;             % h
 
 InputParasL.E0 = 1e5;        % Input waveform parameters
 InputParasL.we = 0;          % rotation frequency
-InputParasL.t0 = 2e-11;      % time delay
-InputParasL.wg = 8e-12;      % gaussian width
+InputParasL.t0 = 30e-13;      % time delay
+InputParasL.wg = 10e-13;      % gaussian width
 InputParasL.phi = 0;         % phase
 InputParasL.rep = 500e-12;   % repeating pulse
 InputParasR = 0;             % 
@@ -34,7 +34,8 @@ Ntr = 1e18;                  % for carrier frequency
 g_fwhm = 3.53e+012/10;
 LGamma = g_fwhm*2*pi;
 Lw0 = 1e12;                  % resonant frequency
-LGain = 0.1;                 % resonant gain
+
+LGain = 0.0;                 % resonant gain
 beta_spe = .3e-5;               % spontaneous emission beta
 gamma = 1.0;                    % gamma SPE
 SPE = 0;                        % spontaneous emission
@@ -46,14 +47,15 @@ EtoP = 1/(Zg*f0*vg*1e-2*c_hb);  % conversion factor from electric field to photo
 plotN = 100;
 L = 1000e-6*1e2;             % cm length of waveguide
 XL = [0,L];
-YL = [-0*InputParasL.E0,1000*InputParasL.E0];
+YL = [-0*InputParasL.E0,300*InputParasL.E0];
 RL = 0;%0.9i;                   % Reflected wave left
 RR = 0;%0.9i;                   % Reflected wave right
-Nz = 51;                    % number of z units in waveguide
+
+Nz = 100;                    % number of z units in waveguide
 dz = L/(Nz-1);               % cm unit of length
 dt = dz/vg;                  % s unit of time
 fsync = dt*vg/dz;            % Hz Synchronous frequency
-Nt = floor(420*Nz);          % number of time units
+Nt = floor(400*Nz);          % number of time units
 tmax = Nt*dt;                % time length of the simulation
 t_L = dt*Nz;                 % time to travel length
 
@@ -76,13 +78,14 @@ Pfp = Pf;
 Prp = Pr;
 
 % Grating
-kappa = grating(0,0,'n/a');
+% kappa = grating(0,0,'n/a');
+kappa = 0*ones(size(z));
 
 % Carrier Equation
 N = ones(size(z))*Ntr;          %
 Nave = nan(1,Nt);
 Nave(1) = mean(N);              % average of N
-gain = vg*2.5e-16/2;              % G0 gain
+gain = vg*2.5e-16;              % G0 gain
 eVol = 1.5e-10*c_q;             % volume of electrons
 Ion = 0.25e-9;                  % current is added between Ion and Ioff
 Ioff = 3e-9;                    % 
@@ -149,14 +152,7 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
         Fr = (ones(Nz,1))*A;
     end
 
-    % Exponential spatial growth term and stimulated emission
-    alpha = 0;                                  % loss term
-    beta_r = 0;                                 % real wave beta
-    gain_z = gain.*(N - Ntr)./vg;                % gain term due to stimulated emission
-    beta_i = (gain_z-alpha)./2;                 % imaginary wave beta with gain/loss terms
-    beta = 1i*beta_i;                           % set length of waveguide to beta
-    exp_det = exp(-1i*dz*beta);                 % exponential growth term along z, rotating with length
-
+  
 
     % Setting up equations
     InputL(i) = Ef1(t,InputParasL);     % propagate envelope from left end of waveguide
@@ -182,6 +178,13 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
     N = (N + dt*(I_injv/eVol - Stim))./(1+dt/taun);     % N(z) update equation
     Nave(i) = mean(N);                                  % record average value of N each step
 
+  % Exponential spatial growth term and stimulated emission
+    alpha = 0;                                  % loss term
+    beta_r = 0;                                 % real wave beta
+    gain_z = gain.*(N - Ntr)./vg;                % gain term due to stimulated emission
+    beta_i = (gain_z-alpha)./2;                 % imaginary wave beta with gain/loss terms
+    beta = 1i*beta_i;                           % set length of waveguide to beta
+    exp_det = exp(-1i*dz*beta);                 % exponential growth term along z, rotating with length
 
     EsF = Ff*abs(SPE).*sqrt(N.*1e6);
     EsR = Fr*abs(SPE).*sqrt(N.*1e6);
@@ -306,3 +309,16 @@ ylim([yMin,yMax])
 xlabel('THz')
 ylabel('phase (E)')
 legend('Input','Output')
+
+
+
+
+
+
+
+
+
+
+
+
+

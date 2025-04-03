@@ -36,7 +36,7 @@ LGamma = g_fwhm*2*pi;
 Lw0 = 1e12;                 % resonant frequency
 LGain = 0.1;                % resonant gain
 
-plotN = 1000;
+plotN = 1200;
 
 L = 1000e-6*1e2;             % cm length of waveguide
 XL = [0,L];

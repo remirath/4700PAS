@@ -13,7 +13,7 @@ if (strcmp(type,'uniform'))
     kappa(round(Nz*start):round(Nz*start)+length(temp)-1) = 1;
     kappa = kappa*kappa0; 
 
-    g = kappa
+    g = kappa;
 end
 
 % Chirped
