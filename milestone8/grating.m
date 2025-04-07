@@ -18,7 +18,7 @@ end
 
 % Chirped
 if (strcmp(type,'chirped'))
-    kappa0 = 100;
+    kappa0 = 1000;
     temp = linspace(0,5,(Nz*stop)-(Nz*start)).'; % range from 0 to 1 over grating length
     kappa(round(Nz*start):round(Nz*start)+length(temp)-1) = temp;
     kappa = kappa0*kappa;
@@ -28,7 +28,7 @@ end
 % Uniform Positive-Only Index Change
 if (strcmp(type,'unipos'))
     kappa0 = 100;
-    temp = linspace(0,3*pi,(Nz*stop)-(Nz*start)).'; % range from 0 to 1 over grating length
+    temp = linspace(0,2*pi*1.33e12,(Nz*stop)-(Nz*start)).'; % range from 0 to 1 over grating length
     kappa(round(Nz*start):round(Nz*start)+length(temp)-1) = abs(sin(temp));
     kappa = kappa0*kappa;
     g = kappa;

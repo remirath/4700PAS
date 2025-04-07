@@ -39,20 +39,20 @@ Lw0 = 1e12;                  % resonant frequency
 LGain = 0.05;                 % resonant gain
 beta_spe = .3e-5;               % spontaneous emission beta
 gamma = 1.0;                    % gamma SPE
-SPE = -1;                        % spontaneous emission
+SPE = 10;                        % spontaneous emission
 taun = 1e-9;                    % spontaneous emission term tau_n
 Zg = sqrt(c_mu_0/c_eps_0)/n_g;  % 
 EtoP = 1/(Zg*f0*vg*1e-2*c_hb);  % conversion factor from electric field to photon density using Zg
 
 % Waveguide and plotting parameters
 plotN = 100;
-L = 1000e-6*1e2;             % cm length of waveguide
+L = 300e-4;             % cm length of waveguide
 XL = [0,L];
 YL = [-0*InputParasL.E0,300*InputParasL.E0];
 RL = 0.5i;                   % Reflected wave left
 RR = 0.5i;                   % Reflected wave right
 
-Nz = 100;                    % number of z units in waveguide
+Nz = 51;                    % number of z units in waveguide
 dz = L/(Nz-1);               % cm unit of length
 dt = dz/vg;                  % s unit of time
 fsync = dt*vg/dz;            % Hz Synchronous frequency
@@ -79,7 +79,7 @@ Pfp = Pf;
 Prp = Pr;
 
 % Grating
-kappa = grating(0,0,'n/a');
+kappa = grating(0.1,1,'unipos');
 % kappa = 0*ones(size(z));
 
 % Carrier Equation
@@ -88,8 +88,8 @@ Nave = nan(1,Nt);
 Nave(1) = mean(N);              % average of N
 gain = vg*2.5e-16;              % G0 gain
 eVol = 1.5e-10*c_q;             % volume of electrons
-Ion = 0.25e-9;                  % current is added between Ion and Ioff
-Ioff = 3e-9;                    % 
+Ion = (dt*Nt)*1/5;                  % current is added between Ion and Ioff
+Ioff = (dt*Nt);                    % 
 I_off = 0.024;                  % the value of current provided when turned off
 I_on = 0.1;                     % vs. when turned on
 
@@ -271,50 +271,70 @@ end
 
 % Frequency domain analysis of signal
 
-fftOutput = fftshift(fft(OutputR));     % FFT of output
-fftInput = fftshift(fft(InputL));       % FFT of input
 omega = fftshift(wspace(time));   % Find phase shift of the fourier transform
+
+% OutputR = OutputR - mean(OutputR);
+% len = length(OutputR);
+% Fs = 1/0.0117;                      %sampling
+% Fn = Fs/2;
+% fftOut = fftshift(fft(OutputR));
+% Iv = 1:length(omega);
+% fftOut_a = double(abs(fftOut(Iv))*2);
+% fftOutput = sgolayfilt(fftOut_a,2,21); %savitsky-golay filtering method of FFT
+
+
+
+
+fftOutput_raw = fftshift(fft(OutputR));
+fftOutput = envelope(abs(fftOutput_raw), 2, 'peak');  %envelope filtering method of FFT
+[yupperFFT,ylowerFFT] = envelope(abs(fftOutput_raw), 2, 'peak');
+
+
+[yupper,ylower] = envelope(real(OutputR), 300, 'peak');             %startup transient of laser - ylower
+
 
 
 figure('name','Frequency Analysis')
 
 % Plot the input and output waveforms over time
 subplot(1,3,1)
-plot(time*1e12,real(InputL),'r'); hold on
-plot(time*1e12,real(OutputR),'g');
-% plot(time*1e12,imag(OutputR),'g--');
+plot(time*1e12,real(InputL),'g'); hold on
+plot(time*1e12,ylower,'r');
 xlim([0,Nt*dt*1e12])
-ylim([-3e6, 0])
+ylim([min(ylower), max(ylower)])
 xlabel('time(ps)')
 ylabel('Right Output')
-legend('Input','\Re Output')
+legend('Input','Output')
 hold off
 
 % Plot the fourier transform of the input and output waveforms
-nonZero_in = fftInput ~= 0;
-db_in(nonZero_in) = 20*log10(abs(fftInput(nonZero_in)));
+% nonZero_in = fftInput ~= 0;
+% db_in(nonZero_in) = 20*log10(abs(fftInput(nonZero_in)));
 nonZero_out = fftOutput ~= 0;
 db_out(nonZero_out) = 20*log10(abs(fftOutput(nonZero_out)));
 
 subplot(1,3,2)
-plot(omega,db_in,'b'); hold on
-plot(omega,db_out,'g'); hold off
-xlim([-5e9,5e9])
-ylim([min(db_in(15000:25000),db_out(15000:25000)),max(db_in,db_out)])
-xlabel('THz')
+% plot(omega,db_in,'b'); hold on
+plot(omega*1e-12,20*log10(fftOutput),'g'); hold off
+xlim([-5,5])
+% ylim([min(fftOutput),max(fftOutput)])
+xlabel('GHz')
 ylabel('|E| (dB)')
 legend('Input','Output')
 
-% Plot the change in phase due to frequency of both waveforms
-yMin = min(min(unwrap(angle(fftOutput))), min(unwrap(angle(fftInput))));
-yMax = max(max(unwrap(angle(fftOutput))),max(unwrap(angle(fftInput))));
+% Plot the phase shift of both waveforms
+fftOutput = fftshift(fft(abs(OutputR)));     % FFT of output
+fftInput = fftshift(fft(InputL));       % FFT of input
+
+% yMin = min(min(unwrap(angle(fftOutput))), min(unwrap(angle(fftInput))));
+% yMax = max(max(unwrap(angle(fftOutput))),max(unwrap(angle(fftInput))));
 
 subplot(1,3,3)
-plot(omega,unwrap(angle(fftInput)),'b'); hold on
-plot(omega,unwrap(angle(fftOutput)),'g'); hold off
-xlim([-5e9,5e9])
-ylim([yMin,yMax])
-xlabel('THz')
+% plot(omega,unwrap(angle(fftInput)),'b'); hold on
+plot(omega*1e-12,unwrap(angle(fftOutput)),'b'); hold off
+xlim([-5,5])
+% ylim([yMin,yMax])
+xlabel('GHz')
 ylabel('phase (E)')
 legend('Input','Output')
 
