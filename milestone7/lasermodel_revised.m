@@ -17,7 +17,7 @@ c_q = 1.60217653e-19;        % Coulombs
 c_hb = 1.05457266913e-34;    % h bar
 c_h = c_hb*2*pi;             % h
 
-InputParasL.E0 = 1e5;        % Input waveform parameters
+InputParasL.E0 = 0e5;        % Input waveform parameters
 InputParasL.we = 0;          % rotation frequency
 InputParasL.t0 = 30e-13;      % time delay
 InputParasL.wg = 10e-13;      % gaussian width
@@ -38,20 +38,20 @@ Lw0 = 1e12;                  % resonant frequency
 LGain = 0.0;                 % resonant gain
 beta_spe = .3e-5;               % spontaneous emission beta
 gamma = 1.0;                    % gamma SPE
-SPE = 0;                        % spontaneous emission
+SPE = 7;                        % spontaneous emission
 taun = 1e-9;                    % spontaneous emission term tau_n
 Zg = sqrt(c_mu_0/c_eps_0)/n_g;  % 
 EtoP = 1/(Zg*f0*vg*1e-2*c_hb);  % conversion factor from electric field to photon density using Zg
 
 % Waveguide and plotting parameters
 plotN = 100;
-L = 1000e-6*1e2;             % cm length of waveguide
+L = 1000e-4;             % cm length of waveguide
 XL = [0,L];
 YL = [-0*InputParasL.E0,300*InputParasL.E0];
 RL = 0;%0.9i;                   % Reflected wave left
 RR = 0;%0.9i;                   % Reflected wave right
 
-Nz = 100;                    % number of z units in waveguide
+Nz = 51;                    % number of z units in waveguide
 dz = L/(Nz-1);               % cm unit of length
 dt = dz/vg;                  % s unit of time
 fsync = dt*vg/dz;            % Hz Synchronous frequency
@@ -205,8 +205,8 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
     OutputR(i) = Ef(Nz)*(1-RR);         % set right output to the last index of forward envelope scaled by 1 minus the reflection coefficient
     OutputL(i) = Er(1)*(1-RL);          % set left output to the first index of reverse envelope scaled by 1 minutes the reflection coefficient
 
-    % Ef = Ef + EsF;
-    % Er = Er + EsR;
+    Ef = Ef + EsF;
+    Er = Er + EsR;
 
     % Reset to previous values to avoid instability
     Efp = Ef;
@@ -225,7 +225,7 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
         plot(z*10000,real(Ef),'r'); hold on
         plot(z*10000,imag(Ef),'r--');
         xlim(XL*1e4)
-        ylim([0,10e6])
+        ylim([-5e6,5e6])
         xlabel('z(\mum)')
         ylabel('E_f')
         % legend('\Re','\Im')
@@ -258,7 +258,7 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
         plot(time*1e12,real(InputR),'b');
         plot(time*1e12,real(OutputL),'m');
         xlim([0,Nt*dt*1e12])
-        ylim(YL)
+        ylim([-5e6,5e6])
         xlabel('time(ps)')
         ylabel('0')
         % legend('Left Input','Right Output','Right Input','Left Output', 'Location','East')
@@ -268,45 +268,56 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
     end
 end
 
-% Frequency domain analysis of signal
+% Frequency domain analysis
+omega = fftshift(wspace(time));  % Frequency array (in Hz)
+fftOutput_raw = fftshift(fft(OutputR));  % FFT of the right output
+fftOutput = envelope(abs(fftOutput_raw), 30, 'peak');  % Envelope of the FFT
+[yupperFFT, ylowerFFT] = envelope(abs(fftOutput_raw), 30, 'peak');
 
-fftOutput = fftshift(fft(OutputR));     % FFT of output
-fftInput = fftshift(fft(InputL));       % FFT of input
-omega = fftshift(wspace(time));         % Find phase shift of the fourier transform
+% Find the peak frequency
+[~, peak_idx] = max(abs(fftOutput));  % Index of the peak amplitude
+peak_freq = omega(peak_idx);  % Peak frequency in Hz
 
-figure('name','Frequency Analysis')
+% Shift the frequency axis to center the peak at 0
+omega_shifted = omega - peak_freq;  % Shifted frequency array (Hz)
+omega_shifted_GHz = omega_shifted * 1e-12;  % Convert to GHz
 
-% Plot the input and output waveforms over time
-subplot(1,3,1)
-plot(time*1e12,real(InputL),'r'); hold on
-plot(time*1e12,real(OutputR),'g');
-plot(time*1e12,imag(OutputR),'g--');
-xlim([0,Nt*dt*1e12])
-ylim(YL)
-xlabel('time(ps)')
+% Compute dB scale for the FFT output
+nonZero_out = fftOutput ~= 0;
+db_out = zeros(size(fftOutput));
+db_out(nonZero_out) = 20 * log10(abs(fftOutput(nonZero_out)));
+
+% Envelope of the time-domain signal (unchanged)
+[yupper, ylower] = envelope(real(OutputR), 300, 'peak');
+
+% Plotting
+figure('name', 'Frequency Analysis')
+
+% Plot the input and output waveforms over time (unchanged)
+subplot(1, 3, 1)
+plot(time*1e12, real(InputL), 'g'); hold on
+plot(time*1e12, real(OutputR), 'r');
+xlim([0, Nt*dt*1e12])
+% ylim([min(ylower), max(ylower)])
+xlabel('time (ps)')
 ylabel('Right Output')
-legend('Input','\Re Output','\Im Output')
+legend('Input', 'Output')
 hold off
 
-% Plot the fourier transform of the input and output waveforms
-subplot(1,3,2)
-plot(omega,abs(fftInput),'b'); hold on
-plot(omega,abs(fftOutput),'g'); hold off
-xlim([min(omega)/15,max(omega)/15])
-ylim([0,max(max(abs(fftInput)),max(abs(fftOutput)))])
-xlabel('THz')
-ylabel('|E|')
-legend('Input','Output')
+% Plot the Fourier transform centered at the peak frequency
+subplot(1, 3, 2)
+plot(omega_shifted_GHz, db_out, 'g'); hold off
+xlim([-5, 5])  % Display ±5 GHz around the peak
+xlabel('Frequency Offset (GHz)')
+ylabel('|E| (dB)')
+title('Spectrum Centered at Peak')
+legend('Output')
 
-% Plot the change in phase due to frequency of both waveforms
-subplot(1,3,3)
-plot(omega,unwrap(angle(fftInput)),'b'); hold on
-plot(omega,unwrap(angle(fftOutput)),'g'); hold off
-yMin = min(min(unwrap(angle(fftOutput))), min(unwrap(angle(fftInput))));
-yMax = max(max(unwrap(angle(fftOutput))),max(unwrap(angle(fftInput))));
-xlim([min(omega)/15,max(omega)/15])
-ylim([yMin,yMax])
-xlabel('THz')
-ylabel('phase (E)')
-legend('Input','Output')
-
+% Plot the phase of the FFT centered at the peak frequency
+subplot(1, 3, 3)
+fftOutput = fftshift(fft(abs(OutputR)));  % FFT of the absolute output
+plot(omega_shifted_GHz, unwrap(angle(fftOutput)), 'b'); hold off
+xlim([-5, 5])  % Display ±5 GHz around the peak
+xlabel('Frequency Offset (GHz)')
+ylabel('Phase (E)')
+legend('Output')

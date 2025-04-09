@@ -18,7 +18,7 @@ c_q = 1.60217653e-19;        % Coulombs
 c_hb = 1.05457266913e-34;    % h bar
 c_h = c_hb*2*pi;             % h
 
-InputParasL.E0 = 10e6;        % Input waveform parameters
+InputParasL.E0 = 0e6;        % Input waveform parameters
 InputParasL.we = 0;          % rotation frequency
 InputParasL.t0 = 2e-12;      % time delay
 InputParasL.wg = 8e-13;      % gaussian width
@@ -36,21 +36,21 @@ LGamma = g_fwhm*2*pi;
 Lw0 = 1e12;                 % resonant frequency
 LGain = 0.1;                % resonant gain
 
-plotN = 1200;
+plotN = 100;
 
-L = 1000e-6*1e2;             % cm length of waveguide
+L = 1000e-4;             % cm length of waveguide
 XL = [0,L];
 YL = [-3*InputParasL.E0,3*InputParasL.E0];
 
 RL = 0;%0.9i;                   % Reflected wave left
 RR = 0;%0.9i;                   % Reflected wave right
 
-Nz = 500;                    % number of z units in waveguide
+Nz = 51;                    % number of z units in waveguide
 dz = L/(Nz-1);               % cm unit of length
 dt = dz/vg;                % s unit of time
 fsync = dt*vg/dz;            % Hz Synchronous frequency
 
-Nt = floor(420*Nz);            % number of units of time is twice that of length
+Nt = floor(400*Nz);            % number of units of time is twice that of length
 tmax = Nt*dt;                % time length of the simulation
 t_L = dt*Nz;                 % time to travel length
 
@@ -166,11 +166,13 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
     Cw0 = -LGamma + 1i*Lw0;
 
     S = (abs(Ef).^2 +abs(Er).^2).*EtoP*1e-6;            % value of S for stimulated emission
-    if t < Ion || t > Ioff                              % decide when to turn the current on or off based on time
-        I_injv = I_off;                                 % turn off
-    else                                                %
-        I_injv = I_on;                                  % turn on
-    end                                                 %                                                                  
+    pulse_period = 500e-12;  % 500 ps period
+    half_period = pulse_period / 2;  % 250 ps for each state
+    if mod(t, pulse_period) < half_period
+        I_injv = I_on;  % First 250 ps: I_on
+    else
+        I_injv = I_off;  % Next 250 ps: I_off
+    end                                            %                                                                  
 
     % Update equations
     Tf = LGamma*Ef(1:Nz-2) + Cw0*Pfp(2:Nz-1) + LGamma*Efp(1:Nz-2);

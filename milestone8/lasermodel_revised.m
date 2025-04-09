@@ -39,14 +39,14 @@ Lw0 = 1e12;                  % resonant frequency
 LGain = 0.05;                 % resonant gain
 beta_spe = .3e-5;               % spontaneous emission beta
 gamma = 1.0;                    % gamma SPE
-SPE = 10;                        % spontaneous emission
+SPE = 1;                        % spontaneous emission
 taun = 1e-9;                    % spontaneous emission term tau_n
 Zg = sqrt(c_mu_0/c_eps_0)/n_g;  % 
 EtoP = 1/(Zg*f0*vg*1e-2*c_hb);  % conversion factor from electric field to photon density using Zg
 
 % Waveguide and plotting parameters
 plotN = 100;
-L = 300e-4;             % cm length of waveguide
+L = 500e-4;             % cm length of waveguide
 XL = [0,L];
 YL = [-0*InputParasL.E0,300*InputParasL.E0];
 RL = 0.5i;                   % Reflected wave left
@@ -79,8 +79,8 @@ Pfp = Pf;
 Prp = Pr;
 
 % Grating
-kappa = grating(0.1,1,'unipos');
-% kappa = 0*ones(size(z));
+% kappa = grating(0,0,'');
+kappa = 0*ones(size(z));
 
 % Carrier Equation
 N = ones(size(z))*Ntr;          %
@@ -91,7 +91,7 @@ eVol = 1.5e-10*c_q;             % volume of electrons
 Ion = (dt*Nt)*1/5;                  % current is added between Ion and Ioff
 Ioff = (dt*Nt);                    % 
 I_off = 0.024;                  % the value of current provided when turned off
-I_on = 0.1;                     % vs. when turned on
+I_on = 0.15;                     % vs. when turned on
 
 % Initial Conditions
 Ef1 = @SourceFct;            % forward envelope child of sourcefct
@@ -262,7 +262,7 @@ for i = 2:Nt                    % loop while time is between 2 and Nt (number of
         ylim([-5e6, 5e6])
         xlabel('time(ps)')
         ylabel('0')
-        % legend('Left Input','Right Output','Right Input','Left Output', 'Location','East')
+        legend('Left Input','Right Output','Right Input','Left Output')
         hold off
 
         pause(0.01)
